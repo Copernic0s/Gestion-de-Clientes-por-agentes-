@@ -129,6 +129,46 @@ function getInitials(name) {
   return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
 }
 
+function getSeedNumber(seed) {
+  const source = String(seed || "agent");
+  let hash = 0;
+  for (let i = 0; i < source.length; i += 1) {
+    hash = (hash << 5) - hash + source.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+function getAgentAvatarSvg(seed) {
+  const seedNum = getSeedNumber(seed);
+  const palettes = [
+    { bg: "#102944", shirt: "#34b7ff", face: "#f6cfab", hair: "#112e4a" },
+    { bg: "#1d2a44", shirt: "#10b981", face: "#f2c7a2", hair: "#332016" },
+    { bg: "#2a1f49", shirt: "#8b5cf6", face: "#f5cfb0", hair: "#1f1b38" },
+    { bg: "#1f3b41", shirt: "#22d3ee", face: "#f1c9a8", hair: "#17312e" },
+  ];
+  const palette = palettes[seedNum % palettes.length];
+  const eyeY = 26 + (seedNum % 2);
+  const clipId = `clip-${seedNum}`;
+
+  return `
+    <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true">
+      <defs>
+        <clipPath id="${clipId}"><circle cx="32" cy="32" r="31" /></clipPath>
+      </defs>
+      <circle cx="32" cy="32" r="31" fill="${palette.bg}" />
+      <g clip-path="url(#${clipId})">
+        <ellipse cx="32" cy="56" rx="22" ry="16" fill="${palette.shirt}" />
+        <circle cx="32" cy="29" r="12" fill="${palette.face}" />
+        <path d="M20 26c0-8 6-14 12-14s12 6 12 14v2H20z" fill="${palette.hair}" />
+        <circle cx="27" cy="${eyeY}" r="1.4" fill="#1f2937" />
+        <circle cx="37" cy="${eyeY}" r="1.4" fill="#1f2937" />
+        <path d="M28 34c2 2 6 2 8 0" stroke="#8b5e3c" stroke-width="1.3" fill="none" stroke-linecap="round" />
+      </g>
+    </svg>
+  `;
+}
+
 function notify(message, type = "success") {
   const toast = document.createElement("article");
   toast.className = `toast toast-${type}`;
@@ -353,7 +393,7 @@ function renderAgents() {
     const li = document.createElement("li");
     const button = document.createElement("button");
     button.className = agent.id === state.selectedAgentId ? "active" : "";
-    button.innerHTML = `<span class="agent-avatar" title="${getInitials(agent.name)}">${getInitials(agent.name)}</span><span class="card-copy"><strong>${agent.name}</strong><div class="agent-meta">${agent.clients.length} clientes</div></span>`;
+    button.innerHTML = `<span class="agent-avatar" title="${getInitials(agent.name)}">${getAgentAvatarSvg(agent.id)}</span><span class="card-copy"><strong>${agent.name}</strong><div class="agent-meta">${agent.clients.length} clientes</div></span>`;
     button.addEventListener("click", () => {
       state.selectedAgentId = agent.id;
       state.selectedClientId = null;
