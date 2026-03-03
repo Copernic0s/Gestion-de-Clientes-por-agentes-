@@ -3,6 +3,7 @@ import { agents as seedAgents } from "./data.js";
 const STORAGE_KEY = "sales-tracker-agents-v1";
 const THEME_KEY = "citifuel-theme";
 const LAST_DARK_THEME_KEY = "citifuel-last-dark-theme";
+const CHECKLIST_KEY = "citifuel-checklist-v1";
 const DARK_THEMES = ["ocean", "slate", "cyber"];
 
 const agentListEl = document.getElementById("agent-list");
@@ -19,6 +20,10 @@ const particlesCanvasEl = document.getElementById("bg-particles");
 const addAgentFormEl = document.getElementById("add-agent-form");
 const addClientFormEl = document.getElementById("add-client-form");
 const addClientNameInputEl = document.getElementById("client-name-input");
+const checklistPanelEl = document.getElementById("checklist-panel");
+const checklistCloseBtnEl = document.getElementById("checklist-close-btn");
+const checklistAddFormEl = document.getElementById("checklist-add-form");
+const checklistListEl = document.getElementById("checklist-list");
 
 const detailEl = document.getElementById("client-detail");
 const emptyDetailEl = document.getElementById("empty-detail");
@@ -31,6 +36,7 @@ const editClientFormEl = document.getElementById("edit-client-form");
 const deleteClientBtnEl = document.getElementById("delete-client-btn");
 
 const agents = loadAgents();
+const checklist = loadChecklist();
 const savedTheme = localStorage.getItem(THEME_KEY);
 const savedDarkTheme = localStorage.getItem(LAST_DARK_THEME_KEY);
 const normalizedDarkTheme = DARK_THEMES.includes(savedDarkTheme) ? savedDarkTheme : "ocean";
@@ -44,6 +50,7 @@ const state = {
   lastDarkTheme: normalizedDarkTheme,
   clientFormOpen: false,
   lastRenderedAgentId: null,
+  checklistOpen: false,
 };
 
 let particleSystem = null;
@@ -92,6 +99,29 @@ function loadAgents() {
 
 function saveAgents() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(agents));
+}
+
+function loadChecklist() {
+  const raw = localStorage.getItem(CHECKLIST_KEY);
+  if (!raw) return [];
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((item) => ({
+        id: String(item.id || ""),
+        text: String(item.text || "").trim(),
+        done: Boolean(item.done),
+      }))
+      .filter((item) => item.id && item.text);
+  } catch {
+    return [];
+  }
+}
+
+function saveChecklist() {
+  localStorage.setItem(CHECKLIST_KEY, JSON.stringify(checklist));
 }
 
 function slugify(value) {
@@ -456,6 +486,28 @@ function renderClientForm() {
   addClientFormEl.classList.toggle("hidden-form", !state.clientFormOpen);
 }
 
+function renderChecklist() {
+  checklistPanelEl.classList.toggle("hidden", !state.checklistOpen);
+  checklistPanelEl.setAttribute("aria-hidden", String(!state.checklistOpen));
+  checklistListEl.innerHTML = "";
+
+  if (checklist.length === 0) {
+    checklistListEl.innerHTML = '<li class="empty-state">Sin tareas por ahora.</li>';
+    return;
+  }
+
+  checklist.forEach((item) => {
+    const li = document.createElement("li");
+    li.className = `check-item ${item.done ? "done" : ""}`;
+    li.innerHTML = `
+      <input type="checkbox" data-action="toggle" data-id="${item.id}" ${item.done ? "checked" : ""} aria-label="Marcar tarea" />
+      <span class="check-label">${item.text}</span>
+      <button type="button" class="check-remove" data-action="remove" data-id="${item.id}" aria-label="Eliminar tarea">×</button>
+    `;
+    checklistListEl.appendChild(li);
+  });
+}
+
 function renderDetail() {
   const client = getSelectedClient();
   if (!client) {
@@ -589,9 +641,70 @@ function handleCloseClientForm() {
   renderClientForm();
 }
 
+function handleChecklistAdd(event) {
+  event.preventDefault();
+  const text = String(new FormData(checklistAddFormEl).get("item") || "").trim();
+  if (!text) return;
+
+  checklist.unshift({
+    id: uniqueId(slugify(text), checklist),
+    text,
+    done: false,
+  });
+
+  checklistAddFormEl.reset();
+  saveChecklist();
+  renderChecklist();
+  notify("Tarea agregada al checklist");
+}
+
+function handleChecklistListClick(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+  const action = target.dataset.action;
+  const id = target.dataset.id;
+  if (!action || !id) return;
+
+  const index = checklist.findIndex((item) => item.id === id);
+  if (index === -1) return;
+
+  if (action === "toggle") {
+    checklist[index].done = !checklist[index].done;
+    saveChecklist();
+    renderChecklist();
+    return;
+  }
+
+  if (action === "remove") {
+    checklist.splice(index, 1);
+    saveChecklist();
+    renderChecklist();
+    notify("Tarea eliminada", "info");
+  }
+}
+
+function toggleChecklist() {
+  state.checklistOpen = !state.checklistOpen;
+  renderChecklist();
+}
+
+function closeChecklist() {
+  if (!state.checklistOpen) return;
+  state.checklistOpen = false;
+  renderChecklist();
+}
+
 function handleGlobalShortcuts(event) {
   const key = event.key.toLowerCase();
   const withModifier = event.ctrlKey || event.metaKey;
+  const target = event.target;
+  const typingOnField =
+    target instanceof HTMLElement &&
+    (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT" || target.isContentEditable);
+
+  if (typingOnField && !event.altKey && key !== "escape") {
+    return;
+  }
 
   if ((event.altKey && key === "z") || (withModifier && event.shiftKey && key === "n")) {
     event.preventDefault();
@@ -599,9 +712,16 @@ function handleGlobalShortcuts(event) {
     return;
   }
 
+  if (event.altKey && key === "c") {
+    event.preventDefault();
+    toggleChecklist();
+    return;
+  }
+
   if ((key === "escape" && state.clientFormOpen) || (event.altKey && key === "x")) {
     event.preventDefault();
     handleCloseClientForm();
+    closeChecklist();
   }
 }
 
@@ -645,6 +765,7 @@ function render() {
   renderDetail();
   renderTicker();
   renderClientForm();
+  renderChecklist();
   state.lastRenderedAgentId = state.selectedAgentId;
 }
 
@@ -654,6 +775,9 @@ addAgentFormEl.addEventListener("submit", handleAddAgent);
 addClientFormEl.addEventListener("submit", handleAddClient);
 editClientFormEl.addEventListener("submit", handleUpdateClient);
 deleteClientBtnEl.addEventListener("click", handleDeleteClient);
+checklistCloseBtnEl.addEventListener("click", closeChecklist);
+checklistAddFormEl.addEventListener("submit", handleChecklistAdd);
+checklistListEl.addEventListener("click", handleChecklistListClick);
 window.addEventListener("keydown", handleGlobalShortcuts);
 
 applyTheme();
