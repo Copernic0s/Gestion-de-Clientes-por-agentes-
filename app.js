@@ -43,6 +43,7 @@ const state = {
   theme: normalizedTheme,
   lastDarkTheme: normalizedDarkTheme,
   clientFormOpen: false,
+  lastRenderedAgentId: null,
 };
 
 let particleSystem = null;
@@ -406,12 +407,12 @@ function renderAgents() {
     agentListEl.appendChild(li);
   });
 
-  animateIn(agentListEl, "detail-enter");
 }
 
 function renderClients() {
   const agent = getSelectedAgent();
   clientListEl.innerHTML = "";
+  const shouldAnimate = state.lastRenderedAgentId !== state.selectedAgentId;
 
   if (!agent) {
     clientsTitleEl.textContent = "Clientes";
@@ -446,7 +447,9 @@ function renderClients() {
     clientListEl.appendChild(li);
   });
 
-  animateIn(clientListEl, "detail-enter");
+  if (shouldAnimate) {
+    animateIn(clientListEl, "detail-enter");
+  }
 }
 
 function renderClientForm() {
@@ -642,6 +645,7 @@ function render() {
   renderDetail();
   renderTicker();
   renderClientForm();
+  state.lastRenderedAgentId = state.selectedAgentId;
 }
 
 themeToggleEl.addEventListener("click", toggleTheme);

@@ -97,17 +97,23 @@ body[data-theme="light"] {
   box-sizing: border-box;
 }
 
-*::-webkit-scrollbar {
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+.list::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
-*::-webkit-scrollbar-thumb {
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb,
+.list::-webkit-scrollbar-thumb {
   background: #314158;
   border-radius: 10px;
 }
 
-*::-webkit-scrollbar-track {
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track,
+.list::-webkit-scrollbar-track {
   background: transparent;
 }
 
@@ -315,6 +321,7 @@ p {
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   padding: 12px;
+  overflow: hidden;
 }
 
 .panel-head {
@@ -376,8 +383,10 @@ kbd {
   padding: 2px;
   display: grid;
   gap: 8px;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   max-height: 300px;
+  padding-right: 2px;
 }
 
 .list button {
@@ -466,6 +475,7 @@ kbd {
   display: grid;
   gap: 8px;
   transition: background 0.25s ease, transform 0.25s ease;
+  overflow: hidden;
 }
 
 .detail-card {
@@ -478,8 +488,8 @@ kbd {
 
 .list.detail-enter > li {
   opacity: 0;
-  animation: listItemIn 0.32s ease forwards;
-  animation-delay: calc(var(--i, 0) * 24ms);
+  animation: listItemIn 0.5s ease forwards;
+  animation-delay: calc(var(--i, 0) * 34ms);
 }
 
 .stack-block h3,
@@ -707,7 +717,7 @@ kbd {
 @keyframes listItemIn {
   from {
     opacity: 0;
-    transform: translateX(8px);
+    transform: translateY(8px);
   }
 
   to {
