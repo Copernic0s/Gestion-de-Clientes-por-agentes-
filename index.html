@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Citifuel Tracker</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <canvas id="bg-particles" class="bg-particles" aria-hidden="true"></canvas>
+
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="topbar-spacer"></div>
+        <h1 class="brand-title">
+          <span class="brand-glyph" aria-hidden="true">
+            <span class="glyph-dots">
+              <i></i><i></i><i></i>
+            </span>
+            <span class="glyph-c">c</span>
+          </span>
+          Citifuel Tracker
+        </h1>
+        <div class="topbar-actions">
+          <button id="theme-cycle" class="icon-toggle" type="button" aria-label="Cambiar paleta">◈</button>
+          <button id="theme-toggle" class="icon-toggle" type="button" aria-label="Cambiar tema">☾</button>
+        </div>
+      </div>
+    </header>
+
+    <section class="ticker-full">
+      <div id="kpi-ticker" class="ticker-track"></div>
+    </section>
+
+    <main class="app-shell">
+      <section class="workspace">
+        <aside class="panel agents-panel">
+          <div class="panel-head">
+            <h2>Agentes</h2>
+            <span id="agent-count" class="pill"></span>
+          </div>
+          <ul id="agent-list" class="list"></ul>
+
+          <form id="add-agent-form" class="form-block">
+            <h3>Nuevo agente</h3>
+            <label for="agent-name-input">Nombre</label>
+            <input id="agent-name-input" name="name" type="text" placeholder="Ej. Maria Lopez" required />
+            <button type="submit">Guardar</button>
+          </form>
+        </aside>
+
+        <section class="panel flow-panel">
+          <div class="panel-head panel-head-clients">
+            <h2 id="clients-title">Clientes</h2>
+            <div class="head-actions">
+              <span id="client-count" class="pill"></span>
+            </div>
+          </div>
+          <p class="shortcut-hint">Atajos: <kbd>Alt + Z</kbd> nuevo cliente | <kbd>Alt + X</kbd> cerrar | <kbd>Esc</kbd> cerrar</p>
+
+          <section class="stack-block">
+            <h3>Lista de clientes</h3>
+            <ul id="client-list" class="list"></ul>
+          </section>
+
+          <form id="add-client-form" class="form-block hidden-form">
+            <h3>Nuevo cliente</h3>
+            <label for="client-name-input">Nombre</label>
+            <input id="client-name-input" name="clientName" type="text" placeholder="Ej. Jose Diaz" required />
+
+            <label for="company-input">Compania</label>
+            <input id="company-input" name="company" type="text" placeholder="Ej. Diaz Logistics LLC" required />
+
+            <label for="phone-input">Telefono</label>
+            <input id="phone-input" name="phone" type="text" placeholder="Ej. 1234567890" />
+
+            <label for="email-input">Correo</label>
+            <input id="email-input" name="email" type="email" placeholder="cliente@email.com" />
+
+            <button type="submit">Guardar</button>
+          </form>
+
+          <section id="client-detail" class="stack-block detail-card hidden">
+            <h3>Ficha del cliente</h3>
+            <div class="detail-grid">
+              <div>
+                <label>Nombre</label>
+                <p id="detail-client-name"></p>
+              </div>
+              <div>
+                <label>Compania</label>
+                <p id="detail-company"></p>
+              </div>
+              <div>
+                <label>Telefono</label>
+                <p id="detail-phone"></p>
+              </div>
+              <div>
+                <label>Correo</label>
+                <p id="detail-email"></p>
+              </div>
+            </div>
+
+            <form id="edit-client-form" class="form-block no-top-space compact-grid-form">
+              <h3>Tracking de seguimiento</h3>
+
+              <div class="field-pair">
+                <label for="edit-client-name-input">Nombre</label>
+                <input id="edit-client-name-input" name="clientName" type="text" required />
+              </div>
+
+              <div class="field-pair">
+                <label for="edit-company-input">Compania</label>
+                <input id="edit-company-input" name="company" type="text" required />
+              </div>
+
+              <div class="field-pair">
+                <label for="edit-phone-input">Telefono</label>
+                <input id="edit-phone-input" name="phone" type="text" />
+              </div>
+
+              <div class="field-pair">
+                <label for="edit-email-input">Correo</label>
+                <input id="edit-email-input" name="email" type="email" />
+              </div>
+
+              <div class="field-pair">
+                <label for="edit-contact-status-input">Estado de contacto</label>
+                <select id="edit-contact-status-input" name="contactStatus">
+                  <option value="Pendiente">Pendiente</option>
+                  <option value="Contactado">Contactado</option>
+                  <option value="Seguimiento activo">Seguimiento activo</option>
+                  <option value="Cerrado">Cerrado</option>
+                </select>
+              </div>
+
+              <div class="field-pair">
+                <label for="edit-last-contact-input">Ultimo contacto</label>
+                <input id="edit-last-contact-input" name="lastContactDate" type="date" />
+              </div>
+
+              <div class="field-pair">
+                <label for="edit-next-followup-input">Proximo seguimiento</label>
+                <input id="edit-next-followup-input" name="nextFollowUpDate" type="date" />
+              </div>
+
+              <div class="field-pair">
+                <label for="edit-info-clear-input">Informacion clara</label>
+                <select id="edit-info-clear-input" name="infoClear">
+                  <option value="Pendiente">Pendiente</option>
+                  <option value="Si">Si</option>
+                  <option value="No">No</option>
+                </select>
+              </div>
+
+              <div class="field-pair span-2">
+                <label for="edit-followup-notes-input">Notas de seguimiento</label>
+                <textarea id="edit-followup-notes-input" name="followUpNotes" rows="4" placeholder="Llamada, dudas y tareas..."></textarea>
+              </div>
+
+              <div class="form-actions">
+                <button type="submit">Guardar tracking</button>
+                <button id="delete-client-btn" type="button" class="danger">Eliminar</button>
+              </div>
+            </form>
+          </section>
+
+          <div id="empty-detail" class="empty-state">Selecciona un cliente para ver su informacion y tracking.</div>
+        </section>
+      </section>
+    </main>
+
+    <section id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></section>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
