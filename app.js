@@ -501,6 +501,7 @@ function renderChecklist() {
     li.innerHTML = `
       <input type="checkbox" data-action="toggle" data-id="${item.id}" ${item.done ? "checked" : ""} aria-label="Marcar tarea" />
       <span class="check-label">${item.text}</span>
+      <button type="button" class="check-edit" data-action="edit" data-id="${item.id}" aria-label="Editar tarea">✎</button>
       <button type="button" class="check-remove" data-action="remove" data-id="${item.id}" aria-label="Eliminar tarea">×</button>
     `;
     checklistListEl.appendChild(li);
@@ -679,6 +680,18 @@ function handleChecklistListClick(event) {
     saveChecklist();
     renderChecklist();
     notify("Tarea eliminada", "info");
+    return;
+  }
+
+  if (action === "edit") {
+    const updated = window.prompt("Editar tarea", checklist[index].text);
+    if (updated === null) return;
+    const text = updated.trim();
+    if (!text) return;
+    checklist[index].text = text;
+    saveChecklist();
+    renderChecklist();
+    notify("Tarea actualizada", "info");
   }
 }
 
@@ -696,7 +709,6 @@ function closeChecklist() {
 function handleGlobalShortcuts(event) {
   const key = event.key.toLowerCase();
   const code = event.code;
-  const withModifier = event.ctrlKey || event.metaKey;
   const target = event.target;
   const typingOnField =
     target instanceof HTMLElement &&
@@ -707,10 +719,16 @@ function handleGlobalShortcuts(event) {
   }
 
   const openClientShortcut =
-    (event.altKey && (key === "z" || code === "KeyZ")) || (withModifier && event.shiftKey && (key === "n" || code === "KeyN"));
+    (event.altKey && (key === "z" || code === "KeyZ")) ||
+    ((event.ctrlKey || event.metaKey) && event.altKey && (key === "z" || code === "KeyZ"));
   const toggleChecklistShortcut =
-    (event.altKey && (key === "c" || code === "KeyC")) || (withModifier && event.shiftKey && (key === "l" || code === "KeyL"));
-  const closePanelsShortcut = (event.altKey && (key === "x" || code === "KeyX")) || key === "escape" || code === "Escape";
+    (event.altKey && (key === "c" || code === "KeyC")) ||
+    ((event.ctrlKey || event.metaKey) && event.altKey && (key === "c" || code === "KeyC"));
+  const closePanelsShortcut =
+    (event.altKey && (key === "x" || code === "KeyX")) ||
+    ((event.ctrlKey || event.metaKey) && event.altKey && (key === "x" || code === "KeyX")) ||
+    key === "escape" ||
+    code === "Escape";
 
   if (openClientShortcut) {
     event.preventDefault();

@@ -669,14 +669,22 @@ kbd {
   gap: 9px;
 }
 
+.checklist-panel.hidden {
+  display: none;
+}
+
 .checklist-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
 }
 
 .checklist-head h3 {
   font-size: 0.96rem;
+}
+
+.checklist-title {
+  text-align: center;
 }
 
 .checklist-add-form {
@@ -722,7 +730,7 @@ kbd {
 
 .check-item {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto 1fr auto auto;
   align-items: center;
   gap: 8px;
   border-radius: 9px;
@@ -751,6 +759,15 @@ kbd {
   color: var(--text-muted);
   cursor: pointer;
   font-size: 1rem;
+  line-height: 1;
+}
+
+.check-edit {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.9rem;
   line-height: 1;
 }
 

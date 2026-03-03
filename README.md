@@ -10,7 +10,7 @@ Aplicacion web sencilla para:
 - Editar y eliminar clientes seleccionados.
 - Ver KPI ticker en tiempo real (estilo barra de mercado).
 - Alternar entre temas visuales (Ocean, Slate, Cyber y Light).
-- Atajos de teclado: `Alt + Z` o `Ctrl + Shift + N` abrir nuevo cliente, `Alt + C` o `Ctrl + Shift + L` abrir/cerrar checklist, `Alt + X` o `Esc` cerrar paneles.
+- Atajos de teclado: `Alt + Z` o `Ctrl + Alt + Z` abrir nuevo cliente, `Alt + C` o `Ctrl + Alt + C` abrir/cerrar checklist, `Alt + X` o `Esc` cerrar paneles.
 - Fondo animado con particulas para profundidad visual.
 
 Todo se guarda en modo local con `localStorage` del navegador.
