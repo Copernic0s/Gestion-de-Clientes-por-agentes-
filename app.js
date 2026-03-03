@@ -21,7 +21,6 @@ const addAgentFormEl = document.getElementById("add-agent-form");
 const addClientFormEl = document.getElementById("add-client-form");
 const addClientNameInputEl = document.getElementById("client-name-input");
 const checklistPanelEl = document.getElementById("checklist-panel");
-const checklistCloseBtnEl = document.getElementById("checklist-close-btn");
 const checklistAddFormEl = document.getElementById("checklist-add-form");
 const checklistListEl = document.getElementById("checklist-list");
 
@@ -696,6 +695,7 @@ function closeChecklist() {
 
 function handleGlobalShortcuts(event) {
   const key = event.key.toLowerCase();
+  const code = event.code;
   const withModifier = event.ctrlKey || event.metaKey;
   const target = event.target;
   const typingOnField =
@@ -706,19 +706,25 @@ function handleGlobalShortcuts(event) {
     return;
   }
 
-  if ((event.altKey && key === "z") || (withModifier && event.shiftKey && key === "n")) {
+  const openClientShortcut =
+    (event.altKey && (key === "z" || code === "KeyZ")) || (withModifier && event.shiftKey && (key === "n" || code === "KeyN"));
+  const toggleChecklistShortcut =
+    (event.altKey && (key === "c" || code === "KeyC")) || (withModifier && event.shiftKey && (key === "l" || code === "KeyL"));
+  const closePanelsShortcut = (event.altKey && (key === "x" || code === "KeyX")) || key === "escape" || code === "Escape";
+
+  if (openClientShortcut) {
     event.preventDefault();
     handleOpenClientForm();
     return;
   }
 
-  if (event.altKey && key === "c") {
+  if (toggleChecklistShortcut) {
     event.preventDefault();
     toggleChecklist();
     return;
   }
 
-  if ((key === "escape" && state.clientFormOpen) || (event.altKey && key === "x")) {
+  if (closePanelsShortcut) {
     event.preventDefault();
     handleCloseClientForm();
     closeChecklist();
@@ -775,7 +781,6 @@ addAgentFormEl.addEventListener("submit", handleAddAgent);
 addClientFormEl.addEventListener("submit", handleAddClient);
 editClientFormEl.addEventListener("submit", handleUpdateClient);
 deleteClientBtnEl.addEventListener("click", handleDeleteClient);
-checklistCloseBtnEl.addEventListener("click", closeChecklist);
 checklistAddFormEl.addEventListener("submit", handleChecklistAdd);
 checklistListEl.addEventListener("click", handleChecklistListClick);
 window.addEventListener("keydown", handleGlobalShortcuts);
