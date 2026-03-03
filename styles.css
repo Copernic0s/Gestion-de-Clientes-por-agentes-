@@ -97,6 +97,20 @@ body[data-theme="light"] {
   box-sizing: border-box;
 }
 
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #314158;
+  border-radius: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 html,
 body {
   margin: 0;
@@ -113,6 +127,8 @@ body {
   transition: background 0.3s ease;
   position: relative;
   overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #314158 transparent;
 }
 
 .bg-particles {
@@ -364,24 +380,6 @@ kbd {
   max-height: 300px;
 }
 
-.list::-webkit-scrollbar {
-  width: 8px;
-}
-
-.list::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.list::-webkit-scrollbar-thumb {
-  background: rgba(149, 164, 187, 0.45);
-  border-radius: 999px;
-}
-
-.list {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(149, 164, 187, 0.45) transparent;
-}
-
 .list button {
   position: relative;
   width: 100%;
@@ -476,6 +474,12 @@ kbd {
 
 .detail-enter {
   animation: detailEnter 0.28s ease;
+}
+
+.list.detail-enter > li {
+  opacity: 0;
+  animation: listItemIn 0.32s ease forwards;
+  animation-delay: calc(var(--i, 0) * 24ms);
 }
 
 .stack-block h3,
@@ -697,6 +701,18 @@ kbd {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes listItemIn {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
   }
 }
 

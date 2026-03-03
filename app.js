@@ -164,6 +164,8 @@ function getAgentAvatarSvg(seed) {
         <circle cx="27" cy="${eyeY}" r="1.4" fill="#1f2937" />
         <circle cx="37" cy="${eyeY}" r="1.4" fill="#1f2937" />
         <path d="M28 34c2 2 6 2 8 0" stroke="#8b5e3c" stroke-width="1.3" fill="none" stroke-linecap="round" />
+        <circle cx="47" cy="47" r="8" fill="#0ea5e9" />
+        <text x="47" y="50" text-anchor="middle" font-size="8" font-weight="800" fill="#eaf6ff" font-family="Arial, sans-serif">S</text>
       </g>
     </svg>
   `;
@@ -389,8 +391,9 @@ function renderAgents() {
   agentCountEl.textContent = `${agents.length} total`;
   agentListEl.innerHTML = "";
 
-  agents.forEach((agent) => {
+  agents.forEach((agent, index) => {
     const li = document.createElement("li");
+    li.style.setProperty("--i", index);
     const button = document.createElement("button");
     button.className = agent.id === state.selectedAgentId ? "active" : "";
     button.innerHTML = `<span class="agent-avatar" title="${getInitials(agent.name)}">${getAgentAvatarSvg(agent.id)}</span><span class="card-copy"><strong>${agent.name}</strong><div class="agent-meta">${agent.clients.length} clientes</div></span>`;
@@ -402,6 +405,8 @@ function renderAgents() {
     li.appendChild(button);
     agentListEl.appendChild(li);
   });
+
+  animateIn(agentListEl, "detail-enter");
 }
 
 function renderClients() {
@@ -426,8 +431,9 @@ function renderClients() {
     return;
   }
 
-  agent.clients.forEach((client) => {
+  agent.clients.forEach((client, index) => {
     const li = document.createElement("li");
+    li.style.setProperty("--i", index);
     const button = document.createElement("button");
     const status = client.contactStatus || "Pendiente";
     button.className = client.id === state.selectedClientId ? "active" : "";
