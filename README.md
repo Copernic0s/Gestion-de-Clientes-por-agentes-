@@ -12,6 +12,7 @@ Aplicacion web sencilla para:
 - Alternar entre temas visuales (Ocean, Slate, Cyber y Light).
 - Atajos de teclado: `Alt + Z` o `Ctrl + Alt + Z` abrir nuevo cliente, `Alt + C` o `Ctrl + Alt + C` abrir/cerrar checklist, `Alt + X` o `Esc` cerrar paneles.
 - Fondo animado con particulas para profundidad visual.
+- Checklist con edicion inline de tareas y panel arrastrable.
 
 Todo se guarda en modo local con `localStorage` del navegador.
 

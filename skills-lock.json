@@ -6,6 +6,11 @@
       "sourceType": "github",
       "computedHash": "25872a21881a950edc3db1f3329664d60405d539660ce05b3265db2de06a7dfd"
     },
+    "implementing-drag-drop": {
+      "source": "ancoleman/ai-design-components",
+      "sourceType": "github",
+      "computedHash": "861ba06673879b5f79dd95c3d3643be20f4e9608ed86140d9ab8f74492eed507"
+    },
     "ui-design": {
       "source": "pproenca/dot-skills",
       "sourceType": "github",

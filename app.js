@@ -4,6 +4,7 @@ const STORAGE_KEY = "sales-tracker-agents-v1";
 const THEME_KEY = "citifuel-theme";
 const LAST_DARK_THEME_KEY = "citifuel-last-dark-theme";
 const CHECKLIST_KEY = "citifuel-checklist-v1";
+const CHECKLIST_POSITION_KEY = "citifuel-checklist-position-v1";
 const DARK_THEMES = ["ocean", "slate", "cyber"];
 
 const agentListEl = document.getElementById("agent-list");
@@ -21,6 +22,7 @@ const addAgentFormEl = document.getElementById("add-agent-form");
 const addClientFormEl = document.getElementById("add-client-form");
 const addClientNameInputEl = document.getElementById("client-name-input");
 const checklistPanelEl = document.getElementById("checklist-panel");
+const checklistHeadEl = document.getElementById("checklist-head");
 const checklistAddFormEl = document.getElementById("checklist-add-form");
 const checklistListEl = document.getElementById("checklist-list");
 
@@ -36,6 +38,7 @@ const deleteClientBtnEl = document.getElementById("delete-client-btn");
 
 const agents = loadAgents();
 const checklist = loadChecklist();
+const checklistPosition = loadChecklistPosition();
 const savedTheme = localStorage.getItem(THEME_KEY);
 const savedDarkTheme = localStorage.getItem(LAST_DARK_THEME_KEY);
 const normalizedDarkTheme = DARK_THEMES.includes(savedDarkTheme) ? savedDarkTheme : "ocean";
@@ -50,6 +53,8 @@ const state = {
   clientFormOpen: false,
   lastRenderedAgentId: null,
   checklistOpen: false,
+  checklistEditingId: null,
+  checklistPosition,
 };
 
 let particleSystem = null;
@@ -121,6 +126,27 @@ function loadChecklist() {
 
 function saveChecklist() {
   localStorage.setItem(CHECKLIST_KEY, JSON.stringify(checklist));
+}
+
+function loadChecklistPosition() {
+  const raw = localStorage.getItem(CHECKLIST_POSITION_KEY);
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (typeof parsed?.x !== "number" || typeof parsed?.y !== "number") return null;
+    return { x: parsed.x, y: parsed.y };
+  } catch {
+    return null;
+  }
+}
+
+function saveChecklistPosition() {
+  if (!state.checklistPosition) {
+    localStorage.removeItem(CHECKLIST_POSITION_KEY);
+    return;
+  }
+  localStorage.setItem(CHECKLIST_POSITION_KEY, JSON.stringify(state.checklistPosition));
 }
 
 function slugify(value) {
@@ -488,6 +514,17 @@ function renderClientForm() {
 function renderChecklist() {
   checklistPanelEl.classList.toggle("hidden", !state.checklistOpen);
   checklistPanelEl.setAttribute("aria-hidden", String(!state.checklistOpen));
+
+  if (state.checklistPosition) {
+    checklistPanelEl.style.left = `${state.checklistPosition.x}px`;
+    checklistPanelEl.style.top = `${state.checklistPosition.y}px`;
+    checklistPanelEl.style.right = "auto";
+  } else {
+    checklistPanelEl.style.left = "";
+    checklistPanelEl.style.top = "";
+    checklistPanelEl.style.right = "14px";
+  }
+
   checklistListEl.innerHTML = "";
 
   if (checklist.length === 0) {
@@ -498,14 +535,78 @@ function renderChecklist() {
   checklist.forEach((item) => {
     const li = document.createElement("li");
     li.className = `check-item ${item.done ? "done" : ""}`;
-    li.innerHTML = `
-      <input type="checkbox" data-action="toggle" data-id="${item.id}" ${item.done ? "checked" : ""} aria-label="Marcar tarea" />
-      <span class="check-label">${item.text}</span>
-      <button type="button" class="check-edit" data-action="edit" data-id="${item.id}" aria-label="Editar tarea">✎</button>
-      <button type="button" class="check-remove" data-action="remove" data-id="${item.id}" aria-label="Eliminar tarea">×</button>
-    `;
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = item.done;
+    checkbox.dataset.action = "toggle";
+    checkbox.dataset.id = item.id;
+    checkbox.setAttribute("aria-label", "Marcar tarea");
+
+    if (state.checklistEditingId === item.id) {
+      const input = document.createElement("input");
+      input.type = "text";
+      input.value = item.text;
+      input.className = "check-inline-input";
+      input.dataset.id = item.id;
+      input.setAttribute("aria-label", "Editar tarea");
+
+      const saveBtn = document.createElement("button");
+      saveBtn.type = "button";
+      saveBtn.className = "check-edit";
+      saveBtn.dataset.action = "save-edit";
+      saveBtn.dataset.id = item.id;
+      saveBtn.setAttribute("aria-label", "Guardar edicion");
+      saveBtn.textContent = "✓";
+
+      const cancelBtn = document.createElement("button");
+      cancelBtn.type = "button";
+      cancelBtn.className = "check-remove";
+      cancelBtn.dataset.action = "cancel-edit";
+      cancelBtn.dataset.id = item.id;
+      cancelBtn.setAttribute("aria-label", "Cancelar edicion");
+      cancelBtn.textContent = "×";
+
+      li.appendChild(checkbox);
+      li.appendChild(input);
+      li.appendChild(saveBtn);
+      li.appendChild(cancelBtn);
+    } else {
+      const label = document.createElement("span");
+      label.className = "check-label";
+      label.textContent = item.text;
+
+      const editBtn = document.createElement("button");
+      editBtn.type = "button";
+      editBtn.className = "check-edit";
+      editBtn.dataset.action = "edit";
+      editBtn.dataset.id = item.id;
+      editBtn.setAttribute("aria-label", "Editar tarea");
+      editBtn.textContent = "✎";
+
+      const removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "check-remove";
+      removeBtn.dataset.action = "remove";
+      removeBtn.dataset.id = item.id;
+      removeBtn.setAttribute("aria-label", "Eliminar tarea");
+      removeBtn.textContent = "×";
+
+      li.appendChild(checkbox);
+      li.appendChild(label);
+      li.appendChild(editBtn);
+      li.appendChild(removeBtn);
+    }
+
     checklistListEl.appendChild(li);
   });
+
+  if (state.checklistEditingId) {
+    const activeInput = checklistListEl.querySelector(`.check-inline-input[data-id="${state.checklistEditingId}"]`);
+    if (activeInput) {
+      activeInput.focus();
+      activeInput.setSelectionRange(activeInput.value.length, activeInput.value.length);
+    }
+  }
 }
 
 function renderDetail() {
@@ -658,11 +759,26 @@ function handleChecklistAdd(event) {
   notify("Tarea agregada al checklist");
 }
 
+function commitChecklistEdit(id, text) {
+  const index = checklist.findIndex((item) => item.id === id);
+  if (index === -1) return;
+  const normalized = String(text || "").trim();
+  if (!normalized) return;
+
+  checklist[index].text = normalized;
+  state.checklistEditingId = null;
+  saveChecklist();
+  renderChecklist();
+  notify("Tarea actualizada", "info");
+}
+
 function handleChecklistListClick(event) {
   const target = event.target;
   if (!(target instanceof HTMLElement)) return;
-  const action = target.dataset.action;
-  const id = target.dataset.id;
+  const actionEl = target.closest("[data-action]");
+  if (!(actionEl instanceof HTMLElement)) return;
+  const action = actionEl.dataset.action;
+  const id = actionEl.dataset.id;
   if (!action || !id) return;
 
   const index = checklist.findIndex((item) => item.id === id);
@@ -677,6 +793,9 @@ function handleChecklistListClick(event) {
 
   if (action === "remove") {
     checklist.splice(index, 1);
+    if (state.checklistEditingId === id) {
+      state.checklistEditingId = null;
+    }
     saveChecklist();
     renderChecklist();
     notify("Tarea eliminada", "info");
@@ -684,14 +803,43 @@ function handleChecklistListClick(event) {
   }
 
   if (action === "edit") {
-    const updated = window.prompt("Editar tarea", checklist[index].text);
-    if (updated === null) return;
-    const text = updated.trim();
-    if (!text) return;
-    checklist[index].text = text;
-    saveChecklist();
+    state.checklistEditingId = id;
     renderChecklist();
-    notify("Tarea actualizada", "info");
+    return;
+  }
+
+  if (action === "cancel-edit") {
+    state.checklistEditingId = null;
+    renderChecklist();
+    return;
+  }
+
+  if (action === "save-edit") {
+    const li = actionEl.closest(".check-item");
+    const input = li?.querySelector(".check-inline-input");
+    if (input instanceof HTMLInputElement) {
+      commitChecklistEdit(id, input.value);
+    }
+  }
+}
+
+function handleChecklistListKeydown(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement) || !target.classList.contains("check-inline-input")) return;
+
+  const id = target.dataset.id;
+  if (!id) return;
+
+  if (event.key === "Enter") {
+    event.preventDefault();
+    commitChecklistEdit(id, target.value);
+    return;
+  }
+
+  if (event.key === "Escape") {
+    event.preventDefault();
+    state.checklistEditingId = null;
+    renderChecklist();
   }
 }
 
@@ -702,8 +850,55 @@ function toggleChecklist() {
 
 function closeChecklist() {
   if (!state.checklistOpen) return;
+  state.checklistEditingId = null;
   state.checklistOpen = false;
   renderChecklist();
+}
+
+function setupChecklistDrag() {
+  let dragging = false;
+  let offsetX = 0;
+  let offsetY = 0;
+
+  function onPointerMove(event) {
+    if (!dragging || !state.checklistOpen) return;
+    const rect = checklistPanelEl.getBoundingClientRect();
+    const nextX = Math.min(Math.max(8, event.clientX - offsetX), window.innerWidth - rect.width - 8);
+    const nextY = Math.min(Math.max(8, event.clientY - offsetY), window.innerHeight - rect.height - 8);
+
+    state.checklistPosition = { x: nextX, y: nextY };
+    checklistPanelEl.style.left = `${nextX}px`;
+    checklistPanelEl.style.top = `${nextY}px`;
+    checklistPanelEl.style.right = "auto";
+  }
+
+  function onPointerUp() {
+    if (!dragging) return;
+    dragging = false;
+    checklistPanelEl.classList.remove("dragging");
+    document.body.style.userSelect = "";
+    saveChecklistPosition();
+    window.removeEventListener("pointermove", onPointerMove);
+    window.removeEventListener("pointerup", onPointerUp);
+  }
+
+  checklistHeadEl.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0 || !state.checklistOpen) return;
+
+    const target = event.target;
+    if (target instanceof HTMLElement && target.closest("button,input,textarea,select,a")) return;
+
+    const rect = checklistPanelEl.getBoundingClientRect();
+    offsetX = event.clientX - rect.left;
+    offsetY = event.clientY - rect.top;
+
+    dragging = true;
+    checklistPanelEl.classList.add("dragging");
+    document.body.style.userSelect = "none";
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
+    event.preventDefault();
+  });
 }
 
 function handleGlobalShortcuts(event) {
@@ -801,8 +996,10 @@ editClientFormEl.addEventListener("submit", handleUpdateClient);
 deleteClientBtnEl.addEventListener("click", handleDeleteClient);
 checklistAddFormEl.addEventListener("submit", handleChecklistAdd);
 checklistListEl.addEventListener("click", handleChecklistListClick);
+checklistListEl.addEventListener("keydown", handleChecklistListKeydown);
 window.addEventListener("keydown", handleGlobalShortcuts);
 
 applyTheme();
 particleSystem = initParticles();
+setupChecklistDrag();
 render();
