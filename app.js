@@ -48,6 +48,7 @@ const normalizedTheme =
 const state = {
   selectedAgentId: agents[0]?.id ?? null,
   selectedClientId: null,
+  clientFilter: "all",
   theme: normalizedTheme,
   lastDarkTheme: normalizedDarkTheme,
   clientFormOpen: false,
@@ -58,6 +59,7 @@ const state = {
 };
 
 let particleSystem = null;
+let tickerResizeFrame = null;
 
 function cloneSeedAgents() {
   return JSON.parse(JSON.stringify(seedAgents));
@@ -261,6 +263,58 @@ function getAllClients() {
   return agents.flatMap((agent) => agent.clients);
 }
 
+function isClientOverdue(client) {
+  if (!client.nextFollowUpDate || client.contactStatus === "Cerrado") return false;
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const date = new Date(`${client.nextFollowUpDate}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return false;
+  return Math.floor((date - today) / 86400000) < 0;
+}
+
+function isClientDueSoon(client) {
+  if (!client.nextFollowUpDate) return false;
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const date = new Date(`${client.nextFollowUpDate}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return false;
+  const diffDays = Math.floor((date - today) / 86400000);
+  return diffDays >= 0 && diffDays <= 7;
+}
+
+function matchesClientFilter(client) {
+  switch (state.clientFilter) {
+    case "pending":
+      return client.contactStatus === "Pendiente";
+    case "contacted":
+      return client.contactStatus === "Contactado";
+    case "active":
+      return client.contactStatus === "Seguimiento activo";
+    case "overdue":
+      return isClientOverdue(client);
+    case "dueSoon":
+      return isClientDueSoon(client);
+    case "infoPending":
+      return client.infoClear !== "Si";
+    case "all":
+    default:
+      return true;
+  }
+}
+
+function getFilterLabel() {
+  const map = {
+    all: "Todos",
+    pending: "Pendientes",
+    contacted: "Contactados",
+    active: "Seguimiento activo",
+    overdue: "Vencidos",
+    dueSoon: "Prox 7 dias",
+    infoPending: "Info por aclarar",
+  };
+  return map[state.clientFilter] || "Todos";
+}
+
 function applyTheme() {
   document.body.setAttribute("data-theme", state.theme);
   themeToggleEl.textContent = state.theme === "light" ? "☀" : "☾";
@@ -403,44 +457,36 @@ function initParticles() {
 
 function renderTicker() {
   const clients = getAllClients();
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
   const pending = clients.filter((client) => client.contactStatus === "Pendiente").length;
   const contacted = clients.filter((client) => client.contactStatus === "Contactado").length;
   const active = clients.filter((client) => client.contactStatus === "Seguimiento activo").length;
   const infoPending = clients.filter((client) => client.infoClear !== "Si").length;
 
-  let overdue = 0;
-  let dueSoon = 0;
-  clients.forEach((client) => {
-    if (!client.nextFollowUpDate) return;
-    const date = new Date(`${client.nextFollowUpDate}T00:00:00`);
-    if (Number.isNaN(date.getTime())) return;
-
-    const diffDays = Math.floor((date - today) / 86400000);
-    if (diffDays < 0 && client.contactStatus !== "Cerrado") overdue += 1;
-    if (diffDays >= 0 && diffDays <= 7) dueSoon += 1;
-  });
+  const overdue = clients.filter((client) => isClientOverdue(client)).length;
+  const dueSoon = clients.filter((client) => isClientDueSoon(client)).length;
 
   const metrics = [
-    { label: "Clientes", value: clients.length, tone: "", icon: "•" },
-    { label: "Pendientes", value: pending, tone: "warn", icon: "▼" },
-    { label: "Contactados", value: contacted, tone: "ok", icon: "▲" },
-    { label: "Seguimiento activo", value: active, tone: "ok", icon: "▲" },
-    { label: "Vencidos", value: overdue, tone: overdue > 0 ? "danger" : "ok", icon: overdue > 0 ? "▼" : "▲" },
-    { label: "Prox 7 dias", value: dueSoon, tone: "", icon: "•" },
-    { label: "Info por aclarar", value: infoPending, tone: infoPending > 0 ? "warn" : "ok", icon: infoPending > 0 ? "▼" : "▲" },
+    { filter: "all", label: "Clientes", value: clients.length, tone: "", icon: "•" },
+    { filter: "pending", label: "Pendientes", value: pending, tone: "warn", icon: "▼" },
+    { filter: "contacted", label: "Contactados", value: contacted, tone: "ok", icon: "▲" },
+    { filter: "active", label: "Seguimiento activo", value: active, tone: "ok", icon: "▲" },
+    { filter: "overdue", label: "Vencidos", value: overdue, tone: overdue > 0 ? "danger" : "ok", icon: overdue > 0 ? "▼" : "▲" },
+    { filter: "dueSoon", label: "Prox 7 dias", value: dueSoon, tone: "", icon: "•" },
+    { filter: "infoPending", label: "Info por aclarar", value: infoPending, tone: infoPending > 0 ? "warn" : "ok", icon: infoPending > 0 ? "▼" : "▲" },
   ];
 
-  const tickerItems = metrics
+  const tickerItemsMarkup = metrics
     .map(
       (metric) =>
-        `<span class="ticker-item ${metric.tone}"><span class="ticker-dot"></span>${metric.label} <strong>${metric.icon} ${metric.value}</strong></span>`
+        `<button type="button" class="ticker-item ${metric.tone} ${metric.filter === state.clientFilter ? "is-active" : ""}" data-filter="${metric.filter}"><span class="ticker-dot"></span>${metric.label} <strong>${metric.icon} ${metric.value}</strong></button>`
     )
     .join("");
 
-  tickerEl.innerHTML = `<div class="ticker-segment">${tickerItems}</div><div class="ticker-segment">${tickerItems}</div>`;
+  tickerEl.innerHTML = `<div class="ticker-segment">${tickerItemsMarkup}</div>`;
+  const segmentWidth = tickerEl.firstElementChild?.getBoundingClientRect().width || window.innerWidth;
+  const repeats = Math.max(3, Math.ceil((window.innerWidth * 2) / Math.max(segmentWidth, 1)) + 1);
+  tickerEl.innerHTML = Array.from({ length: repeats }, () => `<div class="ticker-segment">${tickerItemsMarkup}</div>`).join("");
 }
 
 function renderAgents() {
@@ -476,8 +522,9 @@ function renderClients() {
     return;
   }
 
-  clientsTitleEl.textContent = `Clientes de ${agent.name}`;
-  clientCountEl.textContent = `${agent.clients.length} total`;
+  const filteredClients = agent.clients.filter(matchesClientFilter);
+  clientsTitleEl.textContent = `Clientes de ${agent.name} (${getFilterLabel()})`;
+  clientCountEl.textContent = `${filteredClients.length}/${agent.clients.length}`;
   setFormDisabled(addClientFormEl, false);
 
   if (agent.clients.length === 0) {
@@ -487,7 +534,14 @@ function renderClients() {
     return;
   }
 
-  agent.clients.forEach((client, index) => {
+  if (filteredClients.length === 0) {
+    const li = document.createElement("li");
+    li.innerHTML = `<div class="empty-state">No hay clientes para el filtro: ${getFilterLabel()}.</div>`;
+    clientListEl.appendChild(li);
+    return;
+  }
+
+  filteredClients.forEach((client, index) => {
     const li = document.createElement("li");
     li.style.setProperty("--i", index);
     const button = document.createElement("button");
@@ -505,6 +559,33 @@ function renderClients() {
   if (shouldAnimate) {
     animateIn(clientListEl, "detail-enter");
   }
+}
+
+function handleTickerClick(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+
+  const button = target.closest("[data-filter]");
+  if (!(button instanceof HTMLElement)) return;
+
+  const filter = button.dataset.filter;
+  if (!filter) return;
+
+  state.clientFilter = state.clientFilter === filter && filter !== "all" ? "all" : filter;
+  state.selectedClientId = null;
+  render();
+  clientListEl.scrollIntoView({ behavior: "smooth", block: "start" });
+  notify(`Filtro aplicado: ${getFilterLabel()}`, "info");
+}
+
+function handleWindowResize() {
+  if (tickerResizeFrame) {
+    window.cancelAnimationFrame(tickerResizeFrame);
+  }
+  tickerResizeFrame = window.requestAnimationFrame(() => {
+    renderTicker();
+    tickerResizeFrame = null;
+  });
 }
 
 function renderClientForm() {
@@ -997,7 +1078,9 @@ deleteClientBtnEl.addEventListener("click", handleDeleteClient);
 checklistAddFormEl.addEventListener("submit", handleChecklistAdd);
 checklistListEl.addEventListener("click", handleChecklistListClick);
 checklistListEl.addEventListener("keydown", handleChecklistListKeydown);
+tickerEl.addEventListener("click", handleTickerClick);
 window.addEventListener("keydown", handleGlobalShortcuts);
+window.addEventListener("resize", handleWindowResize);
 
 applyTheme();
 particleSystem = initParticles();

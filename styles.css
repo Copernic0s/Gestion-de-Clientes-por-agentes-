@@ -247,12 +247,27 @@ p {
 }
 
 .ticker-item {
+  appearance: none;
+  border: none;
+  background: transparent;
   display: inline-flex;
   align-items: center;
   gap: 7px;
   white-space: nowrap;
   color: var(--text-muted);
   font-size: 0.8rem;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.ticker-item:hover {
+  opacity: 0.95;
+}
+
+.ticker-item.is-active {
+  transform: translateY(-1px);
 }
 
 .ticker-dot {
