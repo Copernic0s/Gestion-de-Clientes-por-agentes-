@@ -157,6 +157,34 @@
                 <button id="delete-client-btn" type="button" class="danger">Eliminar</button>
               </div>
             </form>
+
+            <section class="form-block sms-block">
+              <h3>Tareas SMS / Invoices</h3>
+
+              <div class="sms-kpis">
+                <span class="sms-kpi">Vencidos <strong id="sms-overdue-count">0</strong></span>
+                <span class="sms-kpi">Hoy <strong id="sms-today-count">0</strong></span>
+                <span class="sms-kpi">Prox 3 dias <strong id="sms-upcoming-count">0</strong></span>
+              </div>
+
+              <form id="sms-task-form" class="sms-task-form">
+                <select id="sms-task-type" name="type">
+                  <option value="SMS Invoice">SMS Invoice</option>
+                  <option value="Recordatorio pago">Recordatorio pago</option>
+                  <option value="Seguimiento cliente">Seguimiento cliente</option>
+                </select>
+                <input id="sms-task-date" name="dueDate" type="date" required />
+                <select id="sms-task-status" name="status">
+                  <option value="Pendiente">Pendiente</option>
+                  <option value="Enviado">Enviado</option>
+                  <option value="Completado">Completado</option>
+                </select>
+                <input id="sms-task-message" name="message" type="text" placeholder="Mensaje o detalle del invoice" required />
+                <button type="submit">Agregar tarea</button>
+              </form>
+
+              <ul id="sms-task-list" class="sms-task-list"></ul>
+            </section>
           </section>
 
           <div id="empty-detail" class="empty-state">Selecciona un cliente para ver su informacion y tracking.</div>

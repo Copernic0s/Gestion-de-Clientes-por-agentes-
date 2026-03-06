@@ -809,6 +809,153 @@ kbd {
   line-height: 1;
 }
 
+.sms-block {
+  gap: 9px;
+}
+
+.sms-kpis {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sms-kpi {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 999px;
+  padding: 4px 8px;
+}
+
+.sms-kpi strong {
+  color: var(--text-main);
+  margin-left: 4px;
+}
+
+.sms-task-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(130px, 1fr));
+  gap: 7px;
+}
+
+.sms-task-form input,
+.sms-task-form select {
+  width: 100%;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-main);
+  font: inherit;
+  font-size: 0.82rem;
+  padding: 7px 9px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.sms-task-form input[name="message"] {
+  grid-column: 1 / -1;
+}
+
+.sms-task-form button {
+  grid-column: 1 / -1;
+  justify-self: start;
+  border: none;
+  border-radius: 8px;
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #062131;
+  background: linear-gradient(120deg, var(--brand), #7ad8fb);
+  cursor: pointer;
+}
+
+.sms-task-list {
+  list-style: none;
+  margin: 0;
+  padding: 2px;
+  display: grid;
+  gap: 7px;
+  max-height: 220px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.sms-task-item {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 9px;
+  padding: 8px;
+  display: grid;
+  gap: 6px;
+}
+
+.sms-task-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.sms-task-meta {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.sms-task-status {
+  font-size: 0.72rem;
+  border-radius: 999px;
+  padding: 2px 7px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+}
+
+.sms-task-message {
+  font-size: 0.82rem;
+  color: var(--text-main);
+}
+
+.sms-task-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.sms-task-actions button {
+  border: none;
+  border-radius: 7px;
+  padding: 5px 8px;
+  font: inherit;
+  font-size: 0.76rem;
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+}
+
+.sms-task-actions button[data-action="remove-sms"] {
+  color: #ffd8d8;
+  background: rgba(248, 113, 113, 0.25);
+}
+
+.sms-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(120px, 1fr));
+  gap: 6px;
+}
+
+.sms-edit-grid input,
+.sms-edit-grid select {
+  width: 100%;
+  border: none;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 6px 8px;
+}
+
+.sms-edit-grid input[data-role="edit-message"] {
+  grid-column: 1 / -1;
+}
+
 .toast-container {
   position: fixed;
   right: 12px;
@@ -925,6 +1072,11 @@ kbd {
   }
 
   .compact-grid-form {
+    grid-template-columns: 1fr;
+  }
+
+  .sms-task-form,
+  .sms-edit-grid {
     grid-template-columns: 1fr;
   }
 }

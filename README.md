@@ -14,6 +14,7 @@ Aplicacion web sencilla para:
 - Fondo animado con particulas para profundidad visual.
 - Checklist con edicion inline de tareas y panel arrastrable.
 - Ticker de metricas en loop continuo con filtros clickeables sobre clientes.
+- Modulo de tareas SMS/Invoices por cliente con agregar, editar, eliminar y marcar enviado.
 
 Todo se guarda en modo local con `localStorage` del navegador.
 

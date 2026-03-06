@@ -32,6 +32,11 @@ const detailClientNameEl = document.getElementById("detail-client-name");
 const detailCompanyEl = document.getElementById("detail-company");
 const detailPhoneEl = document.getElementById("detail-phone");
 const detailEmailEl = document.getElementById("detail-email");
+const smsTaskFormEl = document.getElementById("sms-task-form");
+const smsTaskListEl = document.getElementById("sms-task-list");
+const smsOverdueCountEl = document.getElementById("sms-overdue-count");
+const smsTodayCountEl = document.getElementById("sms-today-count");
+const smsUpcomingCountEl = document.getElementById("sms-upcoming-count");
 
 const editClientFormEl = document.getElementById("edit-client-form");
 const deleteClientBtnEl = document.getElementById("delete-client-btn");
@@ -56,6 +61,7 @@ const state = {
   checklistOpen: false,
   checklistEditingId: null,
   checklistPosition,
+  smsEditingTaskId: null,
 };
 
 let particleSystem = null;
@@ -66,6 +72,18 @@ function cloneSeedAgents() {
 }
 
 function normalizeClient(client) {
+  const smsTasks = Array.isArray(client.smsTasks)
+    ? client.smsTasks
+        .map((task) => ({
+          id: String(task.id || ""),
+          type: String(task.type || "SMS Invoice").trim() || "SMS Invoice",
+          dueDate: String(task.dueDate || "").trim(),
+          status: String(task.status || "Pendiente").trim() || "Pendiente",
+          message: String(task.message || "").trim(),
+        }))
+        .filter((task) => task.id && task.message)
+    : [];
+
   return {
     id: client.id,
     clientName: String(client.clientName || "").trim() || "Sin nombre",
@@ -77,6 +95,7 @@ function normalizeClient(client) {
     nextFollowUpDate: String(client.nextFollowUpDate || "").trim(),
     infoClear: String(client.infoClear || "").trim() || "Pendiente",
     followUpNotes: String(client.followUpNotes || client.notes || "").trim(),
+    smsTasks,
   };
 }
 
@@ -280,6 +299,36 @@ function isClientDueSoon(client) {
   if (Number.isNaN(date.getTime())) return false;
   const diffDays = Math.floor((date - today) / 86400000);
   return diffDays >= 0 && diffDays <= 7;
+}
+
+function getDateDiffFromToday(dateValue) {
+  if (!dateValue) return null;
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const date = new Date(`${dateValue}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return null;
+  return Math.floor((date - today) / 86400000);
+}
+
+function isSmsTaskOpen(task) {
+  return task.status !== "Completado" && task.status !== "Enviado";
+}
+
+function getSmsTaskStats(tasks) {
+  const openTasks = tasks.filter(isSmsTaskOpen);
+  let overdue = 0;
+  let today = 0;
+  let upcoming = 0;
+
+  openTasks.forEach((task) => {
+    const diff = getDateDiffFromToday(task.dueDate);
+    if (diff === null) return;
+    if (diff < 0) overdue += 1;
+    if (diff === 0) today += 1;
+    if (diff > 0 && diff <= 3) upcoming += 1;
+  });
+
+  return { overdue, today, upcoming };
 }
 
 function matchesClientFilter(client) {
@@ -502,6 +551,7 @@ function renderAgents() {
     button.addEventListener("click", () => {
       state.selectedAgentId = agent.id;
       state.selectedClientId = null;
+      state.smsEditingTaskId = null;
       render();
     });
     li.appendChild(button);
@@ -550,6 +600,7 @@ function renderClients() {
     button.innerHTML = `<strong>${client.clientName}</strong><div class="client-meta">${client.company} | ${status}</div>`;
     button.addEventListener("click", () => {
       state.selectedClientId = client.id;
+      state.smsEditingTaskId = null;
       render();
     });
     li.appendChild(button);
@@ -573,6 +624,7 @@ function handleTickerClick(event) {
 
   state.clientFilter = state.clientFilter === filter && filter !== "all" ? "all" : filter;
   state.selectedClientId = null;
+  state.smsEditingTaskId = null;
   render();
   clientListEl.scrollIntoView({ behavior: "smooth", block: "start" });
   notify(`Filtro aplicado: ${getFilterLabel()}`, "info");
@@ -690,12 +742,87 @@ function renderChecklist() {
   }
 }
 
+function renderSmsTasks(client) {
+  const tasks = client.smsTasks || [];
+  const stats = getSmsTaskStats(tasks);
+
+  smsOverdueCountEl.textContent = String(stats.overdue);
+  smsTodayCountEl.textContent = String(stats.today);
+  smsUpcomingCountEl.textContent = String(stats.upcoming);
+
+  smsTaskListEl.innerHTML = "";
+
+  if (tasks.length === 0) {
+    smsTaskListEl.innerHTML = '<li class="empty-state">Sin tareas SMS programadas para este cliente.</li>';
+    return;
+  }
+
+  tasks
+    .slice()
+    .sort((a, b) => {
+      const aDiff = getDateDiffFromToday(a.dueDate);
+      const bDiff = getDateDiffFromToday(b.dueDate);
+      if (aDiff === null && bDiff === null) return 0;
+      if (aDiff === null) return 1;
+      if (bDiff === null) return -1;
+      return aDiff - bDiff;
+    })
+    .forEach((task) => {
+      const li = document.createElement("li");
+      li.className = "sms-task-item";
+
+      if (state.smsEditingTaskId === task.id) {
+        li.innerHTML = `
+          <div class="sms-edit-grid">
+            <select data-role="edit-type" data-id="${task.id}">
+              <option value="SMS Invoice" ${task.type === "SMS Invoice" ? "selected" : ""}>SMS Invoice</option>
+              <option value="Recordatorio pago" ${task.type === "Recordatorio pago" ? "selected" : ""}>Recordatorio pago</option>
+              <option value="Seguimiento cliente" ${task.type === "Seguimiento cliente" ? "selected" : ""}>Seguimiento cliente</option>
+            </select>
+            <input data-role="edit-date" data-id="${task.id}" type="date" value="${task.dueDate || ""}" />
+            <select data-role="edit-status" data-id="${task.id}">
+              <option value="Pendiente" ${task.status === "Pendiente" ? "selected" : ""}>Pendiente</option>
+              <option value="Enviado" ${task.status === "Enviado" ? "selected" : ""}>Enviado</option>
+              <option value="Completado" ${task.status === "Completado" ? "selected" : ""}>Completado</option>
+            </select>
+            <input data-role="edit-message" data-id="${task.id}" type="text" value="${task.message.replace(/"/g, "&quot;")}" />
+          </div>
+          <div class="sms-task-actions">
+            <button type="button" data-action="save-sms" data-id="${task.id}">Guardar</button>
+            <button type="button" data-action="cancel-edit-sms" data-id="${task.id}">Cancelar</button>
+          </div>
+        `;
+      } else {
+        li.innerHTML = `
+          <div class="sms-task-top">
+            <span class="sms-task-meta">${task.type} | ${task.dueDate || "Sin fecha"}</span>
+            <span class="sms-task-status">${task.status}</span>
+          </div>
+          <div class="sms-task-message">${task.message}</div>
+          <div class="sms-task-actions">
+            <button type="button" data-action="mark-sent" data-id="${task.id}">Marcar enviado</button>
+            <button type="button" data-action="edit-sms" data-id="${task.id}">Editar</button>
+            <button type="button" data-action="remove-sms" data-id="${task.id}">Eliminar</button>
+          </div>
+        `;
+      }
+
+      smsTaskListEl.appendChild(li);
+    });
+}
+
 function renderDetail() {
   const client = getSelectedClient();
   if (!client) {
+    state.smsEditingTaskId = null;
     detailEl.classList.add("hidden");
     emptyDetailEl.classList.remove("hidden");
     setFormDisabled(editClientFormEl, true);
+    setFormDisabled(smsTaskFormEl, true);
+    smsTaskListEl.innerHTML = "";
+    smsOverdueCountEl.textContent = "0";
+    smsTodayCountEl.textContent = "0";
+    smsUpcomingCountEl.textContent = "0";
     editClientFormEl.reset();
     return;
   }
@@ -704,6 +831,7 @@ function renderDetail() {
   animateIn(detailEl, "detail-enter");
   emptyDetailEl.classList.add("hidden");
   setFormDisabled(editClientFormEl, false);
+  setFormDisabled(smsTaskFormEl, false);
 
   detailClientNameEl.textContent = client.clientName;
   detailCompanyEl.textContent = client.company;
@@ -719,6 +847,8 @@ function renderDetail() {
   editClientFormEl.elements.nextFollowUpDate.value = client.nextFollowUpDate || "";
   editClientFormEl.elements.infoClear.value = client.infoClear || "Pendiente";
   editClientFormEl.elements.followUpNotes.value = client.followUpNotes || "";
+
+  renderSmsTasks(client);
 }
 
 function handleAddAgent(event) {
@@ -759,6 +889,7 @@ function handleAddClient(event) {
     nextFollowUpDate: "",
     infoClear: "Pendiente",
     followUpNotes: "",
+    smsTasks: [],
   });
 
   agent.clients.push(client);
@@ -794,6 +925,113 @@ function handleUpdateClient(event) {
   saveAgents();
   render();
   notify(`Tracking actualizado: ${clientName}`, "info");
+}
+
+function handleAddSmsTask(event) {
+  event.preventDefault();
+  const client = getSelectedClient();
+  if (!client) return;
+
+  const formData = new FormData(smsTaskFormEl);
+  const type = String(formData.get("type") || "SMS Invoice").trim() || "SMS Invoice";
+  const dueDate = String(formData.get("dueDate") || "").trim();
+  const status = String(formData.get("status") || "Pendiente").trim() || "Pendiente";
+  const message = String(formData.get("message") || "").trim();
+  if (!dueDate || !message) return;
+
+  const smsTasks = client.smsTasks || (client.smsTasks = []);
+  smsTasks.push({
+    id: uniqueId(slugify(`${type}-${dueDate}`), smsTasks),
+    type,
+    dueDate,
+    status,
+    message,
+  });
+
+  smsTaskFormEl.reset();
+  smsTaskFormEl.elements.type.value = "SMS Invoice";
+  smsTaskFormEl.elements.status.value = "Pendiente";
+  state.smsEditingTaskId = null;
+  saveAgents();
+  render();
+  notify("Tarea SMS agregada");
+}
+
+function handleSmsTaskListClick(event) {
+  const client = getSelectedClient();
+  if (!client) return;
+
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+  const actionEl = target.closest("[data-action]");
+  if (!(actionEl instanceof HTMLElement)) return;
+
+  const action = actionEl.dataset.action;
+  const id = actionEl.dataset.id;
+  if (!action || !id) return;
+
+  const tasks = client.smsTasks || [];
+  const index = tasks.findIndex((task) => task.id === id);
+  if (index === -1) return;
+
+  if (action === "mark-sent") {
+    tasks[index].status = "Enviado";
+    saveAgents();
+    render();
+    notify("SMS marcado como enviado", "info");
+    return;
+  }
+
+  if (action === "edit-sms") {
+    state.smsEditingTaskId = id;
+    render();
+    return;
+  }
+
+  if (action === "cancel-edit-sms") {
+    state.smsEditingTaskId = null;
+    render();
+    return;
+  }
+
+  if (action === "save-sms") {
+    const row = actionEl.closest(".sms-task-item");
+    if (!(row instanceof HTMLElement)) return;
+    const typeInput = row.querySelector('[data-role="edit-type"]');
+    const dateInput = row.querySelector('[data-role="edit-date"]');
+    const statusInput = row.querySelector('[data-role="edit-status"]');
+    const messageInput = row.querySelector('[data-role="edit-message"]');
+
+    if (!(typeInput instanceof HTMLSelectElement)) return;
+    if (!(dateInput instanceof HTMLInputElement)) return;
+    if (!(statusInput instanceof HTMLSelectElement)) return;
+    if (!(messageInput instanceof HTMLInputElement)) return;
+
+    const message = messageInput.value.trim();
+    const dueDate = dateInput.value.trim();
+    if (!message || !dueDate) return;
+
+    tasks[index].type = typeInput.value;
+    tasks[index].dueDate = dueDate;
+    tasks[index].status = statusInput.value;
+    tasks[index].message = message;
+
+    state.smsEditingTaskId = null;
+    saveAgents();
+    render();
+    notify("Tarea SMS actualizada", "info");
+    return;
+  }
+
+  if (action === "remove-sms") {
+    tasks.splice(index, 1);
+    if (state.smsEditingTaskId === id) {
+      state.smsEditingTaskId = null;
+    }
+    saveAgents();
+    render();
+    notify("Tarea SMS eliminada", "error");
+  }
 }
 
 function handleDeleteClient() {
@@ -1075,6 +1313,8 @@ addAgentFormEl.addEventListener("submit", handleAddAgent);
 addClientFormEl.addEventListener("submit", handleAddClient);
 editClientFormEl.addEventListener("submit", handleUpdateClient);
 deleteClientBtnEl.addEventListener("click", handleDeleteClient);
+smsTaskFormEl.addEventListener("submit", handleAddSmsTask);
+smsTaskListEl.addEventListener("click", handleSmsTaskListClick);
 checklistAddFormEl.addEventListener("submit", handleChecklistAdd);
 checklistListEl.addEventListener("click", handleChecklistListClick);
 checklistListEl.addEventListener("keydown", handleChecklistListKeydown);
